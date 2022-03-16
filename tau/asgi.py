@@ -30,6 +30,7 @@ application = ProtocolTypeRouter({
                 url(r'ws/irc-messages/$', coreconsumers.TwitchChatConsumer.as_asgi()),
                 url(r'ws/chat-bots/status/$', chatbotconsumers.ChatBotStatusConsumer.as_asgi()),
                 path('ws/chat-bots/<str:chat_bot>/', chatbotconsumers.ChatBotConsumer.as_asgi(), name='chatbot'),
+                url(r'ws/message-broker/$', coreconsumers.MessageBrokerConsumer.as_asgi()),
             ]
         )
     ),
