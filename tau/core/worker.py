@@ -195,6 +195,10 @@ class Worker:
     async def send_server(self, message):
         await self.server_connection.send(message)
 
+    async def disconnect_irc(self):
+        await self.connection.close()
+        self.irc_connected = False
+
     async def manage_webhooks(self):
         refresh_webhooks = True
         while True:
@@ -250,7 +254,48 @@ class Worker:
 
         self.create_event_loop()
 
-    async def check_irc_settings(self):
+    async def initial_connect(self):
+        token = await database_sync_to_async(self.lookup_setting)('TWITCH_ACCESS_TOKEN')
+        caps = 'twitch.tv/tags twitch.tv/commands twitch.tv/membership'
+        await self.connection.send(f'CAP REQ :{caps}')
+        await self.connection.send(f'PASS oauth:{token}')
+        await self.connection.send(f'NICK {self.username}')
+        await self.connection.send(f'JOIN #{self.username.lower()}')
+
+    async def recieve(self):
+        while True:
+            try:
+                use_irc = await database_sync_to_async(self.lookup_setting)('USE_IRC')
+                if not use_irc:
+                    await self.disconnect_irc()
+                    return
+                message = await self.connection.recv()
+                data = self.parse_message(message)
+                # pp.pprint(data)
+                if 'custom-reward-id' in data['tags']:
+                    await database_sync_to_async(self.handle_channel_points)(data)
+                elif data['command'] == "PRIVMSG":
+                    headers = {
+                        'Authorization': f'Token {self.tau_token}',
+                        'Content-type': 'application/json'
+                    }
+                    requests.post(
+                        f'{settings.LOCAL_URL}/api/v1/irc',
+                        data=json.dumps(data),
+                        headers=headers
+                    )
+                elif data['prefix'] is None and data['command'] == 'PING':
+                    await self.connection.send('PONG')
+                
+            except websockets.exceptions.ConnectionClosed:
+                use_irc = await database_sync_to_async(self.lookup_setting)('USE_IRC')
+                if use_irc:
+                    print('Websocket to twitch irc unexpectedly closed... reconnecting')
+                    await self.connect()
+                else:
+                    break
+
+    async def check_irc_settings(self): 
         while True:
             await asyncio.sleep(self.irc_delay)
             use_irc = await database_sync_to_async(self.lookup_setting)('USE_IRC')
