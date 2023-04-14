@@ -17,5 +17,5 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     - uses: docker/build-push-action@v4.0.0
       with:
-        tags: ghcr.io/Team-TAU/tau
+        tags: ghcr.io/cgsdev0/tau
         push: true
