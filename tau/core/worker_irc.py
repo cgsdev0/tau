@@ -109,6 +109,8 @@ class WorkerIrc:
                 # pp.pprint(data)
                 if self.streamer and 'custom-reward-id' in data['tags']:
                     await database_sync_to_async(self.handle_channel_points)(data)
+                elif data['command'] == "RECONNECT":
+                    print("TWITCH_SENT_US_A_RECONNECT_MESSAGE")
                 elif data['command'] == "PRIVMSG":
                     payload = {
                         "irc_username": self.user_login,
