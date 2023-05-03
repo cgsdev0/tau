@@ -97,10 +97,12 @@ class MessageBrokerConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def receive(self, text_data=None, bytes_data=None, **kwargs):
+        print("received from socket: ", text_data)
         json_data = json.loads(text_data)
         if self.scope['user'].id:
             # pass message to be posted to twitch chat
             # channel_layer = get_channel_layer()
+            print("received from socket: ", json_data)
             await self.channel_layer.group_send(
                 'messagebroker',
                 {
